@@ -4,9 +4,9 @@ Tarayıcıda çalışan 3D oyunlar — Three.js ile, kurulum gerektirmez.
 
 | Oyun | Açıklama |
 |---|---|
-| 🌊 **[Deniz Dibi — Çöp Avcısı](https://volvox6767.github.io/bilfen-games/denizalti-cop.html)** | Bilfen robotla denize dal, çöpleri topla, denizanalarından kaç! 4 yetenek (Turbo, O₂ Şoku, Mıknatıs, Sonar), dalga sistemi, prosedürel sualtı müziği. |
-| 🏃 **[ROBİ 3D — Kovalamaca](https://volvox6767.github.io/bilfen-games/robichase3d.html)** | ROBİ'den kaç, dash yap, hayatta kal! |
-| 👻 **[ROBİ Pacman](https://volvox6767.github.io/bilfen-games/robipacman.html)** | Klasik pacman, ROBİ tarzında. |
+| 🌊 **[Deniz Dibi — Çöp Avcısı](https://bilfen.github.io/bilfen-games/denizalti-cop.html)** | Bilfen robotla denize dal, çöpleri topla, denizanalarından kaç! 4 yetenek (Turbo, O₂ Şoku, Mıknatıs, Sonar), dalga sistemi, prosedürel sualtı müziği. |
+| 🏃 **[ROBİ 3D — Kovalamaca](https://bilfen.github.io/bilfen-games/robichase3d.html)** | ROBİ'den kaç, dash yap, hayatta kal! |
+| 👻 **[ROBİ Pacman](https://bilfen.github.io/bilfen-games/robipacman.html)** | Klasik pacman, ROBİ tarzında. |
 
 ## 🕹️ Deniz Dibi — Kontroller
 - **WASD / Ok tuşları** — Yüz
