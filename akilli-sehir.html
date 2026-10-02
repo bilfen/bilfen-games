@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BUZ KIRICI — Canlı Sensörler ve Akıllı Araç</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a1a2a;
+    font-family:"Segoe UI", system-ui, sans-serif; color:#eef7ff; user-select:none; }
+  #app { position:fixed; inset:0; } canvas { display:block; }
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:5; display:none; }
+  #hud.on { display:block; }
+  .panel { position:absolute; background:rgba(6,26,42,.72); border:1px solid rgba(70,200,255,.3);
+    border-radius:14px; padding:10px 14px; backdrop-filter:blur(8px); box-shadow:0 6px 24px rgba(0,0,0,.4); }
+  .lbl { font-size:11px; letter-spacing:2px; color:#6fd8ff; text-transform:uppercase; }
+  #topLeft { top:14px; left:14px; min-width:190px; }
+  #scoreVal { font-size:24px; font-weight:800; }
+  #cryVal { font-size:18px; font-weight:800; color:#7cd7ff; }
+  #timeVal { font-size:18px; font-weight:800; color:#ffd166; }
+  #roleTag { position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    font-size:16px; font-weight:800; letter-spacing:1px; padding:8px 22px; border-radius:999px;
+    background:rgba(6,26,42,.75); border:1px solid rgba(70,200,255,.4); }
+  #sonarCompass { position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    width:56px; height:56px; border-radius:50%; border:2px solid rgba(124,215,255,.75);
+    background:rgba(6,26,42,.6); display:none; align-items:center; justify-content:center; }
+  #sonarCompass.on { display:flex; }
+  #sonarCompass .hand { position:absolute; width:3px; height:42%; bottom:50%; left:50%;
+    transform-origin:bottom center; border-radius:2px;
+    background:linear-gradient(to top,#7cd7ff,rgba(124,215,255,.15));
+    transform:translateX(-50%) rotate(0deg); box-shadow:0 0 8px rgba(124,215,255,.8); }
+  #beepPanel { top:14px; right:14px; text-align:right; min-width:150px; }
+  #beepVal { font-size:22px; font-weight:800; color:#ffd166; }
+  #guide { position:fixed; bottom:14px; right:14px; z-index:6; max-width:340px;
+    background:rgba(4,20,34,.82); border:1px solid rgba(70,200,255,.35); border-radius:14px;
+    padding:12px 16px; font-size:12.5px; line-height:1.75; color:rgba(190,228,255,.95);
+    backdrop-filter:blur(8px); box-shadow:0 8px 28px rgba(0,0,0,.45); pointer-events:none; }
+  #guide b { color:#38e8ff; }
+  #guide .gtitle { font-size:13px; font-weight:800; letter-spacing:1px; color:#7cffb2; margin-bottom:4px; }
+  #guide .step { color:#ffd166; font-weight:700; }
+  #prompt { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:7;
+    background:rgba(6,32,52,.88); border:1px solid rgba(124,255,178,.55); border-radius:999px;
+    padding:10px 24px; font-size:15px; font-weight:800; color:#7cffb2; display:none;
+    backdrop-filter:blur(6px); box-shadow:0 6px 22px rgba(0,0,0,.45); pointer-events:none;
+    white-space:nowrap; }
+  #prompt.on { display:block; animation:pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform:translateX(-50%) scale(1.06); } }
+  #menu { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:16px; text-align:center; padding:20px; z-index:20;
+    background:radial-gradient(ellipse at 50% 35%, rgba(14,52,82,.55), rgba(2,10,18,.9)); }
+  #menu h1 { font-size:clamp(24px,5.2vw,46px); background:linear-gradient(90deg,#38e8ff,#7cffb2,#ffd166);
+    -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:1px; }
+  #menu .sub { font-size:14.5px; color:#a8cbe0; max-width:660px; line-height:1.7; }
+  #roleCards { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+  .rcard { width:195px; background:rgba(8,38,58,.85); border:1px solid rgba(70,200,255,.35);
+    border-radius:14px; padding:14px 12px; cursor:pointer; transition:transform .12s, border-color .12s; pointer-events:auto; }
+  .rcard:hover { transform:translateY(-3px); border-color:#38e8ff; }
+  .rcard .ric { font-size:30px; }
+  .rcard .rname { font-size:14px; font-weight:800; margin-top:4px; color:#fff; }
+  .rcard .rdesc { font-size:11.5px; color:#9fc6dd; margin-top:4px; line-height:1.5; }
+  .btn { pointer-events:auto; cursor:pointer; border:none; border-radius:999px; padding:14px 44px;
+    font-size:17px; font-weight:700; letter-spacing:1px; color:#03141f;
+    background:linear-gradient(90deg,#38e8ff,#7cffb2); box-shadow:0 8px 30px rgba(60,200,255,.35); }
+  .hidden { display:none !important; }
+  #toast { position:fixed; top:24%; left:50%; transform:translateX(-50%); font-size:24px; font-weight:800;
+    color:#7cffb2; text-shadow:0 0 16px rgba(80,255,170,.7); opacity:0; z-index:15;
+    pointer-events:none; transition:opacity .25s, transform .25s; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(-10px); }
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:8; opacity:0;
+    background:radial-gradient(ellipse at 50% 50%, rgba(255,60,60,0) 55%, rgba(255,40,50,.4) 100%); }
+  #flash.on { animation:fl .5s ease-in-out; }
+  @keyframes fl { 0% { opacity:1; } 100% { opacity:0; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div class="panel" id="topLeft">
+    <div class="lbl">Görev</div>
+    <div id="scoreVal">0 / 6 bina</div>
+    <div class="lbl" style="margin-top:7px">❄️ Buz Kristalleri</div>
+    <div id="cryVal">0</div>
+    <div class="lbl" style="margin-top:7px">⏱ Süre</div>
+    <div id="timeVal">15:00</div>
+  </div>
+  <div id="roleTag">🚗 AKILLI ARAÇ</div>
+  <div id="sonarCompass" title="Buz Radarı"><span class="hand"></span></div>
+  <div class="panel" id="beepPanel">
+    <div class="lbl">Mesafe Sensörü</div>
+    <div id="beepVal">—</div>
+  </div>
+</div>
+
+<div id="prompt">🖐️ SPACE → Tampon sensörü BUZU KIR!</div>
+
+<div id="guide">
+  <div class="gtitle">📋 ETKİNLİK YÖNERGESİ</div>
+  <div id="guideBody"></div>
+</div>
+
+<div id="flash"></div>
+<div id="toast"></div>
+
+<div id="menu">
+  <h1>🧊 BUZ KIRICI — CANLI SENSÖRLER &amp; AKILLI ARAÇ</h1>
+  <p class="sub">
+    Buz Fırtınası Akıllı Şehri dondurdu! Akıllı araç <b>ROBI</b>, gözleri kapalı şekilde yola çıkar —
+    sadece <b>canlı sensörlerinin</b> sesli ve dokunsal sinyallerine güvenebilir.
+    <b>6 buzlu binayı</b> sensör takım work'iyle kır, ❄️ buz kristallerini topla, şehri dondan kurtar!
+    Önce rolünü seç — oyunda <b>R</b> tuşuyla her zaman değiştirebilirsin.
+  </p>
+  <div id="roleCards">
+    <div class="rcard" data-role="arac">
+      <div class="ric">🚗</div><div class="rname">AKILLI ARAÇ</div>
+      <div class="rdesc">Gözlerin kapalı! Bip sesi ve kırmızı uyarıyla buzlu binalara git, SPACE ile buzu kırdır.</div>
+    </div>
+    <div class="rcard" data-role="mesafe">
+      <div class="ric">📡</div><div class="rname">MESAFE SENSÖRÜ</div>
+      <div class="rdesc">Yaklaştıkça bip hızlanır. Üstteki 🧭 Buz Radarı en yakın buzlu binayı gösterir!</div>
+    </div>
+    <div class="rcard" data-role="tampon">
+      <div class="ric">🖐️</div><div class="rname">TAMPON SENSÖRÜ</div>
+      <div class="rdesc">Buzlu binada SPACE = dokunma sinyali → BUZ KIRILIR! Engel varsa SPACE = DUR.</div>
+    </div>
+  </div>
+  <button class="btn" id="startBtn">ETKİNLİĞE BAŞLA</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./lib/three/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './lib/three/examples/jsm/loaders/GLTFLoader.js';
+
+/* ================= AYARLAR ================= */
+
+const CFG = {
+  cityR: 34, walk: 6.2, run: 11.2,
+  beepNear: 9, beepFar: 20,      // mesafe sensörü aralığı
+  crashSpeed: 3.0,               // bu hızın üstünde çarpınca sekme
+  goalBuildings: 6,
+  GAME_TIME: 900,                // 15 dakika (etkinlik süresi)
+  BREAK_RANGE: 6.5,              // buz kırma temas mesafesi (binanın kenarından)
+  CRYSTALS: 12,                  // sahaya saçılan buz kristali
+};
+const ROLES = {
+  arac:   { tag:'🚗 AKILLI ARAÇ', key:'arac' },
+  mesafe: { tag:'📡 MESAFE SENSÖRÜ', key:'mesafe' },
+  tampon: { tag:'🖐️ TAMPON SENSÖRÜ', key:'tampon' },
+};
+const GUIDE_STEPS = {
+  arac: `<span class="step">1.</span> <b>WASD/Ok</b> ile yürü, <b>Shift</b> basılıyken KOŞ. Gözlerin kapalı — <b>sinyallere</b> güven!<br>
+         <span class="step">2.</span> Sağ üstte <b>BİP hızı</b>: 🟨 20-9 m yavaşlaş, 🔴 9 m altı dön!<br>
+         <span class="step">3.</span> Üstteki <b>🧭 Buz Radarı</b> en yakın buzlu binayı gösterir — oraya git.<br>
+         <span class="step">4.</span> Binaya yaklaşınca <b>SPACE</b>: tampon sensörü koşar ve <b>BUZ KIRILIR!</b><br>
+         <span class="step">5.</span> ❄️ Kristalleri topla · Rol değiştir: <b>R</b>`,
+  mesafe: `<span class="step">1.</span> Aracı yürüt — ama asıl işin <b>sensörlük</b>! Engel yaklaştıkça BİP hızlanır (sağ üst).<br>
+         <span class="step">2.</span> 🟨 <b>20-9 m</b>: arayı sıklaştır · 🔴 <b>9 m altı</b>: gitme, dön!<br>
+         <span class="step">3.</span> <b>🧭 Radar</b> ile buzlu binayı bul; araç yaklaşınca <b>SPACE</b> ile buz kırılır.<br>
+         <span class="step">4.</span> Rol değiştirmek: <b>R</b>`,
+  tampon: `<span class="step">1.</span> Aracı yürüt — sen takımın <b>elleri</b>sin!<br>
+         <span class="step">2.</span> Buzlu binaya yaklaş: altta <b>"SPACE → BUZU KIR"</b> yazınca <b>SPACE</b> = dokunma sinyali!<br>
+         <span class="step">3.</span> Engele çarpmadan önce <b>SPACE</b> = DUR: araç geri gider.<br>
+         <span class="step">4.</span> Rol değiştirmek: <b>R</b>`,
+};
+const ROLE_HINT = {
+  arac: '🚗 Bip hızlanınca yavaşla — buzlu binada SPACE ile kır!',
+  mesafe: '📡 Bip hızını takip et; 🧭 radar buzlu binayı gösterir!',
+  tampon: '🖐️ Buzlu binada SPACE ile kır, engelde SPACE ile dur!',
+};
+
+/* ================= DURUM ================= */
+const $ = id => document.getElementById(id);
+let role = 'arac';
+let state = 'MENU';        // MENU | PLAY
+let score = 0;             // kırılan buzlu bina
+let elapsed = 0;           // saniye
+let crashCount = 0;
+let victory = false;
+let timeWarned = false;
+let tamponWaveT = 0;       // buz kırınca tampon NPC el sallar
+let beepRate = 0;
+let beepT = 0;
+let toastT = null;
+
+function brokenCount() { return buildings.filter(b => b.isGoal && b.broken).length; }
+function fmt(t) {
+  t = Math.max(0, Math.ceil(t));
+  return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1500);
+}
+function flashRed() {
+  const f = $('flash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+}
+function setRole(r) {
+  role = r;
+  $('roleTag').textContent = ROLES[r].tag;
+  $('guideBody').innerHTML = GUIDE_STEPS[r] + `<br><span style="opacity:.65">💡 ${ROLE_HINT[r]}</span>`;
+  swapCharacter();
+}
+function setGuideTitle(t) { document.querySelector('#guide .gtitle').textContent = t; }
+
+/* ================= SES (prosedürel) ================= */
+let AC = null;
+function ensureAudio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+  if (AC && AC.state === 'suspended') AC.resume();
+}
+function tone(f, f2, dur, gain = 0.15, type = 'sine') {
+  if (!AC) return;
+  const t0 = AC.currentTime;
+  const o = AC.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(30, f2), t0 + dur);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function beep(freq) { tone(freq, freq, 0.09, 0.14, 'square'); }
+function successChord() { [523.25, 659.25, 783.99].forEach((f) => tone(f, f, 0.35, 0.14, 'triangle')); setTimeout(() => tone(1046.5, 1046.5, 0.4, 0.1, 'triangle'), 240); }
+function crashSound() { tone(160, 50, 0.4, 0.3, 'sawtooth'); tone(90, 40, 0.5, 0.25); }
+function glassSound() { tone(1400, 400, 0.3, 0.18, 'triangle'); tone(700, 90, 0.45, 0.2, 'sawtooth'); tone(1800, 1800, 0.15, 0.1, 'sine'); }
+
+/* ================= SAHNE ================= */
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+$('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x102c42);
+scene.fog = new THREE.Fog(0x102c42, 40, 110);
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 300);
+
+scene.add(new THREE.HemisphereLight(0xbfe0ff, 0x1a3a4a, 1.05));
+const sun = new THREE.DirectionalLight(0xdfeaff, 1.5);
+sun.position.set(24, 38, 16); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -45; sun.shadow.camera.right = 45;
+sun.shadow.camera.top = 45; sun.shadow.camera.bottom = -45;
+scene.add(sun);
+
+/* zemin: buzlu sokak ızgarası */
+const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 64),
+  new THREE.MeshStandardMaterial({ color:0x2a3d4e, roughness:.95 }));
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+const grid = new THREE.GridHelper(56, 14, 0x3d5a70, 0x33495c);
+grid.position.y = 0.02; scene.add(grid);
+const cityRing = new THREE.Mesh(new THREE.RingGeometry(35.4, 36.4, 72),
+  new THREE.MeshBasicMaterial({ color:0x38e8ff, transparent:true, opacity:.35, side:THREE.DoubleSide }));
+cityRing.rotation.x = -Math.PI/2; cityRing.position.y = 0.03; scene.add(cityRing);
+
+/* ================= BİNALAR + ENGELLER ================= */
+const buildings = [];   // { x, z, r, h, isGoal, broken, ice, shellMat, lampMat, beamMat }
+const obstacles = [];   // { x, z, r }
+
+function makeBuilding(x, z, w, h, d, color, isGoal) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness:.8, metalness:.1 }));
+  body.position.y = h/2; body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+  // pencere şeritleri
+  const winMat = new THREE.MeshBasicMaterial({ color:0xffe9a8 });
+  const rows = Math.max(1, Math.floor(h / 2.2));
+  for (let i=0;i<rows;i++) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(w*0.86, 0.35, 0.06), winMat);
+    strip.position.set(0, 1.4 + i*2.2, d/2 + 0.02);
+    g.add(strip);
+    const strip2 = strip.clone(); strip2.position.z = -d/2 - 0.02; g.add(strip2);
+  }
+  // çatı ışığı: buzlu (hedef) binalar KIRMIZI başlar, buz kırılınca yeşile döner
+  const lampMat = new THREE.MeshBasicMaterial({ color: isGoal ? 0xff6b81 : 0x5a7488 });
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), lampMat);
+  lamp.position.y = h + 0.42; g.add(lamp);
+  const beamMat = new THREE.MeshBasicMaterial({ color: isGoal ? 0xff6b81 : 0x5a7488, transparent:true,
+    opacity: isGoal ? 0.28 : 0.08, side:THREE.DoubleSide, depthWrite:false });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.5, 5, 8, 1, true), beamMat);
+  beam.position.y = h + 2.9; g.add(beam);
+
+  // 🧊 BUZ ZIRHI: hedef binaları buz fırtınası sardı
+  let ice = null, shellMat = null;
+  if (isGoal) {
+    ice = new THREE.Group();
+    shellMat = new THREE.MeshStandardMaterial({ color:0xa8e2ff, transparent:true, opacity:0.4,
+      roughness:0.12, metalness:0.05, emissive:0x1a4a66, emissiveIntensity:0.55, depthWrite:false });
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(w+1.2, h+1.0, d+1.2), shellMat);
+    shell.position.y = h/2; ice.add(shell);
+    for (let i=0;i<4;i++) {
+      const ic = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.8+Math.random()*0.7, 6),
+        new THREE.MeshStandardMaterial({ color:0xcdeeff, transparent:true, opacity:0.85, roughness:0.1 }));
+      ic.rotation.x = Math.PI;   // aşağı sarkan buzdiken
+      ic.position.set(-w/2+0.8+i*(w-1.6)/3, h-0.2, d/2+0.45);
+      ice.add(ic);
+    }
+    const frost = new THREE.Mesh(new THREE.CircleGeometry(Math.max(w,d)*1.05, 24),
+      new THREE.MeshBasicMaterial({ color:0x9fdcff, transparent:true, opacity:0.2, depthWrite:false }));
+    frost.rotation.x = -Math.PI/2; frost.position.y = 0.04; ice.add(frost);
+    g.add(ice);
+  }
+
+  g.position.set(x, 0, z);
+  scene.add(g);
+  const r = Math.max(w, d) * 0.72;
+  buildings.push({ x, z, r, h, isGoal:!!isGoal, broken:false, ice, shellMat, lampMat, beamMat });
+  obstacles.push({ x, z, r });
+  return buildings[buildings.length-1];
+}
+function makeLamp(x, z) {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 5.4, 8),
+    new THREE.MeshStandardMaterial({ color:0x44586a, roughness:.6, metalness:.4 }));
+  pole.position.y = 2.7; pole.castShadow = true; g.add(pole);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 8),
+    new THREE.MeshBasicMaterial({ color:0xffe9a8 }));
+  bulb.position.y = 5.6; g.add(bulb);
+  const light = new THREE.PointLight(0xffe9a8, 14, 16, 2);
+  light.position.y = 5.4; g.add(light);
+  g.position.set(x, 0, z); scene.add(g);
+  obstacles.push({ x, z, r:0.55 });
+}
+function makeCone(x, z) {
+  const g = new THREE.Group();
+  const c = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 10),
+    new THREE.MeshStandardMaterial({ color:0xff7043, roughness:.5 }));
+  c.position.y = 0.75; c.castShadow = true; g.add(c);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.46, 0.28, 10),
+    new THREE.MeshStandardMaterial({ color:0xffffff }));
+  band.position.y = 0.9; g.add(band);
+  g.position.set(x, 0, z); scene.add(g);
+  obstacles.push({ x, z, r:0.6 });
+}
+
+// şehir planı: buzlu hedef binalar + dolgu binalar + lambalar + koniler
+const goalPos = [[14,14],[-18,16],[20,-12],[-14,-18],[4,-22],[-24,-2]];
+goalPos.forEach((p,i) => makeBuilding(p[0], p[1], 5.5, 7+i%3*1.6, 5.5, 0x3d6d8f, true));
+[[8,-8],[-9,9],[16,4],[-4,20],[24,10],[-26,12]].forEach((p,i) => makeBuilding(p[0], p[1], 4.5, 5+(i%2)*2.5, 4.5, 0x54677a, false));
+[[0,12],[-12,0],[10,0],[0,-10],[18,20],[-20,-10],[6,22]].forEach(p => makeLamp(p[0], p[1]));
+[[5,5],[-7,-5],[12,-16],[-16,8],[22,2],[-8,-22],[15,8]].forEach(p => makeCone(p[0], p[1]));
+
+// yaya geçidi şeritleri (dekor)
+for (let i=0;i<5;i++) {
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 10),
+    new THREE.MeshBasicMaterial({ color:0xcfe4f0, transparent:true, opacity:.35 }));
+  s.rotation.x = -Math.PI/2; s.position.set(-20+i*2.1, 0.025, 0); scene.add(s);
+}
+
+/* ================= ❄️ KAR YAĞIŞI ================= */
+const SNOW_N = 900;
+const snowGeo = new THREE.BufferGeometry();
+{
+  const pos = new Float32Array(SNOW_N*3);
+  for (let i=0;i<SNOW_N;i++) {
+    pos[i*3]   = (Math.random()-0.5)*100;
+    pos[i*3+1] = Math.random()*26;
+    pos[i*3+2] = (Math.random()-0.5)*100;
+  }
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+}
+const snow = new THREE.Points(snowGeo,
+  new THREE.PointsMaterial({ color:0xdff2ff, size:0.22, transparent:true, opacity:0.85, depthWrite:false }));
+scene.add(snow);
+function updateSnow(dt) {
+  const a = snowGeo.attributes.position.array;
+  const tNow = performance.now()*0.001;
+  for (let i=0;i<SNOW_N;i++) {
+    a[i*3+1] -= dt * (1.2 + (i%5)*0.3);
+    a[i*3]   += Math.sin(tNow + i)*dt*0.4;
+    if (a[i*3+1] < 0) a[i*3+1] = 24 + Math.random()*4;
+  }
+  snowGeo.attributes.position.needsUpdate = true;
+}
+
+/* ================= ❄️ BUZ KRİSTALLERİ (bonus) ================= */
+const crystals = [];
+(function placeCrystals() {
+  let guard = 0;
+  while (crystals.length < CFG.CRYSTALS && guard++ < 500) {
+    const a = Math.random()*Math.PI*2, r = 6 + Math.random()*24;
+    const x = Math.cos(a)*r, z = Math.sin(a)*r;
+    let ok = true;
+    for (const o of obstacles) if (Math.hypot(x-o.x, z-o.z) < o.r + 2.2) { ok=false; break; }
+    if (!ok) continue;
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.5),
+      new THREE.MeshStandardMaterial({ color:0x7cd7ff, emissive:0x1f6fa8, emissiveIntensity:0.9,
+        roughness:0.2, metalness:0.3 }));
+    m.position.set(x, 1.1, z); m.castShadow = true; scene.add(m);
+    crystals.push({ m, x, z, taken:false, ph:Math.random()*6.28 });
+  }
+})();
+
+/* ================= 🧊 BUZ KIRMA PARÇACIKLARI ================= */
+const shards = [];
+function burstIce(b) {
+  for (let i=0;i<16;i++) {
+    const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.16+Math.random()*0.22),
+      new THREE.MeshStandardMaterial({ color:0xbfe9ff, transparent:true, opacity:0.9,
+        roughness:0.15, metalness:0.1 }));
+    const a = Math.random()*Math.PI*2;
+    m.position.set(b.x + Math.cos(a)*b.r*0.9, 1.2+Math.random()*2.4, b.z + Math.sin(a)*b.r*0.9);
+    scene.add(m);
+    shards.push({ m, vx:Math.cos(a)*(2+Math.random()*3), vy:3+Math.random()*4, vz:Math.sin(a)*(2+Math.random()*3),
+      rx:(Math.random()-0.5)*8, ry:(Math.random()-0.5)*8, life:1.3 });
+  }
+}
+function updateShards(dt) {
+  for (let i=shards.length-1;i>=0;i--) {
+    const s = shards[i];
+    s.life -= dt;
+    if (s.life <= 0) {
+      scene.remove(s.m); s.m.geometry.dispose(); s.m.material.dispose();
+      shards.splice(i,1); continue;
+    }
+    s.vy -= 14*dt;
+    s.m.position.x += s.vx*dt;
+    s.m.position.y = Math.max(0.05, s.m.position.y + s.vy*dt);
+    s.m.position.z += s.vz*dt;
+    if (s.m.position.y <= 0.05) { s.vy = 0; s.vx *= 0.9; s.vz *= 0.9; }
+    s.m.rotation.x += s.rx*dt; s.m.rotation.y += s.ry*dt;
+    s.m.material.opacity = Math.min(0.9, s.life/0.8);
+  }
+}
+
+/* ================= MODELLER ================= */
+const loader = new GLTFLoader();
+const SCALE = { erkek: 3.2/2.61, kiz: 3.2/2.51, robot: 3.2/4.43 };   // actor key'leriyle aynı
+const actors = {};   // key → { root, mixer, actions, current }
+
+function loadModel(file, key) {
+  return new Promise((res, rej) => loader.load('./'+file, g => {
+    const root = g.scene;
+    root.traverse(o => {
+      if (o.isMesh) {
+        o.castShadow = true; o.receiveShadow = true;
+        o.frustumCulled = false;   // skinned mesh culling hatasına karşı
+      }
+    });
+    const mixer = new THREE.AnimationMixer(root);
+    const actions = {};
+    for (const clip of g.animations) actions[clip.name.toLowerCase()] = mixer.clipAction(clip);
+    actors[key] = { root, mixer, actions, current:null };
+    res();
+  }, undefined, rej));
+}
+
+function makeRig(modelKey) {
+  const wrap = new THREE.Group();
+  const a = actors[modelKey];
+  // modeli zemine oturt (ayaklar y=0'da) — bozuk/NaN bbox'a karşı korumalı
+  const bb = new THREE.Box3().setFromObject(a.root);
+  const minY = (bb.isEmpty() || !isFinite(bb.min.y)) ? 0 : bb.min.y;
+  a.root.position.y = -minY;
+  wrap.add(a.root);
+  const s = SCALE[modelKey];
+  if (isFinite(s) && s > 0) wrap.scale.setScalar(s);
+  else console.warn('SCALE tanımsız:', modelKey);
+  const g = new THREE.Group();
+  g.add(wrap);
+  g.visible = false;
+  scene.add(g);
+  return { g, a };
+}
+
+let rigArac = null, rigMesafe = null, rigTampon = null;
+function swapCharacter() {
+  if (!rigArac) return;
+  // TAKIM HEP GÖRÜNÜR: ROBI + mesafe (kız) + tampon (erkek) birlikte sahnede.
+  // R ile rol değişimi sadece görev/yönerge perspektifini değiştirir.
+  rigArac.g.visible = true;
+  rigMesafe.g.visible = true;
+  rigTampon.g.visible = true;
+}
+
+function mixPlay(actor, name, ts = 1, fade = 0.18) {
+  const act = actor.actions[name];
+  if (!act) return;
+  act.timeScale = ts;
+  if (actor.current !== name) {
+    act.reset().fadeIn(fade).play();
+    if (actor.current && actor.actions[actor.current]) actor.actions[actor.current].fadeOut(fade);
+    actor.current = name;
+  }
+}
+function animRig(rig, dt, hv, run, wave) {
+  if (!rig) return;
+  if (wave) mixPlay(rig.a, 'wave', 1.1);
+  else if (hv < 0.05) mixPlay(rig.a, 'idle', 1);
+  else mixPlay(rig.a, 'walk', run ? 2.1 : Math.max(0.8, Math.min(1.8, hv/3)));
+  rig.a.mixer.update(dt);
+}
+
+/* ================= OYUNCU + NPC ================= */
+const keys = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.code === 'KeyR' && state === 'PLAY') cycleRole();
+  if (e.code === 'Space' && state === 'PLAY') doSpaceAction();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+let sel = 'arac';   // varsayılan rol: akıllı araç
+document.querySelector('.rcard[data-role="arac"]').style.borderColor = '#7cffb2';
+let modelsReady = false;
+const p = { x:0, z:8, vx:0, vz:0, dirX:0, dirZ:-1, yaw:0 };
+const mesafe = { x:2, z:10, yaw:0 };
+const tampon = { x:0, z:11, yaw:0 };
+
+function moveObstacleSafe(o, dx, dz, r) {
+  o.x += dx; o.z += dz;
+  for (const b of obstacles) {
+    const ddx = o.x - b.x, ddz = o.z - b.z;
+    const dist = Math.hypot(ddx, ddz), min = b.r + r;
+    if (dist < min && dist > 0.001) {
+      o.x = b.x + ddx/dist*min; o.z = b.z + ddz/dist*min;
+      return true;   // itildi
+    }
+  }
+  const lim = CFG.cityR - r, d = Math.hypot(o.x, o.z);
+  if (d > lim) { o.x = o.x/d*lim; o.z = o.z/d*lim; }
+  return false;
+}
+
+/* çarpışma bildirimi (araç rolündeyken) */
+function crashFeedback(hard) {
+  crashCount++;
+  flashRed(); crashSound();
+  toast(hard ? '💥 ÇARPTIN! Sensörleri dinle, geri git!' : '⚠️ TAMPON SİNYALİ! Dur ve geri git');
+}
+
+function cycleRole() {
+  const order = ['arac','mesafe','tampon'];
+  const next = order[(order.indexOf(role)+1) % 3];
+  setRole(next);
+  toast('ROL: ' + ROLES[next].tag);
+  tone(660, 880, 0.2, 0.12, 'triangle');
+}
+
+/* en yakın kırılmamış buzlu bina */
+function nearestFrozen() {
+  let best = null, bd = Infinity;
+  for (const b of buildings) {
+    if (!b.isGoal || b.broken) continue;
+    const d = Math.hypot(b.x-p.x, b.z-p.z);
+    if (d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
+
+/* SPACE: kooperatif buz kırma / dur sinyali */
+function doSpaceAction() {
+  ensureAudio();
+  const nb = nearestFrozen();
+  const dEdge = nb ? Math.hypot(p.x-nb.x, p.z-nb.z) - nb.r : Infinity;
+  if (dEdge < CFG.BREAK_RANGE) { breakIce(nb); return; }
+  // tampon temas sinyali: araç durur ve geri gider
+  p.vx = -p.dirX*6; p.vz = -p.dirZ*6;
+  tone(300, 180, 0.25, 0.2, 'square');
+  toast('🖐️ DUR SİNYALİ! Araç geri gidiyor');
+}
+
+function breakIce(b) {
+  if (!b || b.broken) return;
+  b.broken = true;
+  if (b.ice) b.ice.visible = false;
+  b.lampMat.color.setHex(0x7cffb2);
+  b.beamMat.color.setHex(0x7cffb2); b.beamMat.opacity = 0.4;
+  burstIce(b);
+  glassSound();
+  tamponWaveT = 1.5;
+  updateScoreHud();
+  const n = brokenCount();
+  toast('🧊 BUZ KIRILDI! (' + n + '/' + CFG.goalBuildings + ')');
+  if (n >= CFG.goalBuildings) onVictory();
+  else successChord();
+}
+
+function onVictory() {
+  victory = true;
+  successChord(); setTimeout(successChord, 380);
+  toast('🎉 TÜM BUZLAR KIRILDI! ŞEHİR KURTULDU!');
+  setGuideTitle('🏁 GÖREV TAMAMLANDI');
+  $('guideBody').innerHTML =
+    'Tebrikler! Sensör takımı şehri dondan kurtardı! 🌟<br>' +
+    '⏱ Süre: <b>' + fmt(elapsed) + '</b> · ❄️ Kristal: <b>' + crystals.filter(c=>c.taken).length +
+    '</b> · 💥 Çarpışma: <b>' + crashCount + '</b><br><br>' +
+    '<b>Değerlendirme sorusu:</b><br><i>"İnsanların duyu organları ile robotların ' +
+    'sensörleri arasında nasıl bir bağlantı var?"</i><br><br>' +
+    '👁 Göz ↔ 📡 Mesafe sensörü &nbsp;·&nbsp; 🖐 Deri ↔ 🖱 Tampon sensörü &nbsp;·&nbsp; ' +
+    '🧠 Beyin ↔ 💻 Araç yazılımı<br><br>' +
+    'Rol değiştir (<b>R</b>) — sayfayı yenileyip yeniden oynayabilirsin!';
+}
+
+function updateScoreHud() {
+  $('scoreVal').textContent = brokenCount() + ' / ' + CFG.goalBuildings + ' bina';
+  $('cryVal').textContent = crystals.filter(c => c.taken).length;
+}
+function resetWorld() {
+  score = 0; elapsed = 0; crashCount = 0; victory = false; timeWarned = false; tamponWaveT = 0;
+  for (const b of buildings) {
+    if (!b.isGoal) continue;
+    b.broken = false;
+    if (b.ice) b.ice.visible = true;
+    b.lampMat.color.setHex(0xff6b81);
+    b.beamMat.color.setHex(0xff6b81); b.beamMat.opacity = 0.28;
+  }
+  for (const c of crystals) { c.taken = false; c.m.visible = true; }
+  updateScoreHud();
+  $('timeVal').textContent = fmt(CFG.GAME_TIME);
+  setGuideTitle('📋 ETKİNLİK YÖNERGESİ');
+}
+
+/* role seçimi */
+document.querySelectorAll('.rcard').forEach(c => {
+  c.addEventListener('click', () => {
+    sel = c.dataset.role;
+    document.querySelectorAll('.rcard').forEach(x => x.style.borderColor = 'rgba(70,200,255,.35)');
+    c.style.borderColor = '#7cffb2';
+    ensureAudio(); tone(660, 880, 0.15, 0.1, 'triangle');
+  });
+});
+$('startBtn').addEventListener('click', () => {
+  if (!modelsReady) { toast('Modeller hâlâ yükleniyor...'); return; }
+  ensureAudio();
+  resetWorld();
+  setRole(sel);
+  state = 'PLAY';
+  $('menu').classList.add('hidden');
+  $('hud').classList.add('on');
+  // kamerayı oyuncunun arkasına anında yerleştir (ilk karede doğru açı)
+  camera.position.set(p.x, 12.5, p.z + 14);
+  camera.lookAt(p.x, 2.2, p.z);
+  successChord();
+});
+
+/* ================= ANA DÖNGÜ ================= */
+const clock = new THREE.Clock();
+
+/* bir karelik simülasyon — hem rAF hem test köprüsü bunu çağırır */
+function stepOnce(dt) {
+  const t = performance.now()*0.001;
+
+  updateSnow(dt);
+
+  /* menüde de takım sahnede dursun (idle animasyonlu) */
+  if (state !== 'PLAY' && rigArac) {
+    animRig(rigArac, dt, 0, false, false);
+    animRig(rigMesafe, dt, 0, false, false);
+    animRig(rigTampon, dt, 0, false, false);
+  }
+
+  if (state === 'PLAY') {
+    const run = !!(keys.ShiftLeft || keys.ShiftRight);
+    const SPEED = run ? CFG.run : CFG.walk;
+    let ix = 0, iz = 0;
+    if (keys.KeyW || keys.ArrowUp) iz -= 1;
+    if (keys.KeyS || keys.ArrowDown) iz += 1;
+    if (keys.KeyA || keys.ArrowLeft) ix -= 1;
+    if (keys.KeyD || keys.ArrowRight) ix += 1;
+    const il = Math.hypot(ix, iz);
+    if (il > 0) { p.dirX = ix/il; p.dirZ = iz/il; p.yaw = Math.atan2(p.dirX, p.dirZ); }
+
+    p.vx += ((il ? p.dirX*SPEED : 0) - p.vx) * Math.min(1, dt*8);
+    p.vz += ((il ? p.dirZ*SPEED : 0) - p.vz) * Math.min(1, dt*8);
+    const pushed = moveObstacleSafe(p, p.vx*dt, p.vz*dt, 0.9);
+    if (pushed && Math.hypot(p.vx, p.vz) > CFG.crashSpeed && role === 'arac') crashFeedback(true);
+
+    // mesafe sensörü NPC: aracın ~6 birim önünde
+    const targetMX = p.x + p.dirX*6, targetMZ = p.z + p.dirZ*6;
+    mesafe.x += (targetMX - mesafe.x) * Math.min(1, dt*2.2);
+    mesafe.z += (targetMZ - mesafe.z) * Math.min(1, dt*2.2);
+    moveObstacleSafe(mesafe, 0, 0, 0.5);
+    mesafe.yaw = p.yaw;
+
+    // tampon sensörü NPC: aracın ~9 birim önünde
+    const targetTX = p.x + p.dirX*9, targetTZ = p.z + p.dirZ*9;
+    tampon.x += (targetTX - tampon.x) * Math.min(1, dt*1.8);
+    tampon.z += (targetTZ - tampon.z) * Math.min(1, dt*1.8);
+    moveObstacleSafe(tampon, 0, 0, 0.5);
+    tampon.yaw = p.yaw;
+
+    /* --- mesafe sensörü: en yakın engel mesafesi --- */
+    let nearest = Infinity;
+    for (const o of obstacles) {
+      const dAhead = Math.hypot(o.x - (p.x + p.dirX*2), o.z - (p.z + p.dirZ*2));
+      const front = (o.x - p.x)*p.dirX + (o.z - p.z)*p.dirZ;   // sadece önümüzdekiler
+      if (front > -1) nearest = Math.min(nearest, dAhead - o.r);
+    }
+    if (nearest === Infinity) nearest = 99;
+    beepRate = nearest < CFG.beepNear ? 6 : nearest < CFG.beepFar ? 2.4 : 0;
+    const beepEl = $('beepVal');
+    if (beepRate > 0) {
+      beepEl.textContent = '🟨 YAKIN — ' + Math.max(0, nearest).toFixed(1) + ' m';
+      beepEl.style.color = nearest < CFG.beepNear ? '#ff6b81' : '#ffd166';
+      beepT -= dt;
+      if (beepT <= 0) { beepT = 1/beepRate; beep(nearest < CFG.beepNear ? 1150 : 780); }
+    } else {
+      beepEl.textContent = '🟩 AKTİF — ' + Math.min(99, nearest).toFixed(1) + ' m';
+      beepEl.style.color = '#7cffb2';
+    }
+
+    /* --- 🧭 buz radarı + 🖐️ kırma promptu --- */
+    const nb = nearestFrozen();
+    const compass = $('sonarCompass');
+    if (nb && !victory) {
+      compass.classList.add('on');
+      const rel = (Math.atan2(nb.x-p.x, -(nb.z-p.z)) - Math.atan2(p.dirX, -(p.dirZ))) * 180/Math.PI;
+      compass.querySelector('.hand').style.transform = `translateX(-50%) rotate(${rel.toFixed(1)}deg)`;
+    } else compass.classList.remove('on');
+    const dEdge = nb ? Math.hypot(p.x-nb.x, p.z-nb.z) - nb.r : Infinity;
+    const pr = $('prompt');
+    if (nb && !victory && dEdge < CFG.BREAK_RANGE) {
+      pr.textContent = '🖐️ SPACE → Tampon sensörü BUZU KIR!';
+      pr.classList.add('on');
+    } else pr.classList.remove('on');
+
+    /* --- ❄️ kristaller + buz kabuğu nabzı --- */
+    for (const c of crystals) {
+      if (c.taken) continue;
+      c.m.rotation.y += dt*1.6;
+      c.m.position.y = 1.1 + Math.sin(t*2 + c.ph)*0.25;
+      if (Math.hypot(p.x-c.x, p.z-c.z) < 1.7) {
+        c.taken = true; c.m.visible = false;
+        tone(880, 1320, 0.18, 0.12, 'triangle'); tone(1320, 1760, 0.22, 0.08, 'triangle');
+        updateScoreHud();
+      }
+    }
+    for (const b of buildings) {
+      if (b.isGoal && !b.broken && b.shellMat) b.shellMat.opacity = 0.34 + 0.08*Math.sin(t*2.2 + b.x);
+    }
+    updateShards(dt);
+
+    /* --- ⏱ süre --- */
+    elapsed += dt;
+    const left = Math.max(0, CFG.GAME_TIME - elapsed);
+    const tv = $('timeVal');
+    tv.textContent = fmt(left);
+    tv.style.color = left < 60 ? '#ff6b81' : '#ffd166';
+    if (left <= 0 && !timeWarned && !victory) {
+      timeWarned = true;
+      toast('⏱ 15 dk doldu! Amaç eğlenmek — devam et! 🧊');
+    }
+
+    /* --- modeller + animasyon --- */
+    if (rigArac) {
+      rigArac.g.position.set(p.x, 0, p.z);
+      rigArac.g.rotation.y = p.yaw;
+      animRig(rigArac, dt, Math.hypot(p.vx, p.vz), run, victory);
+    }
+    if (rigMesafe) {
+      rigMesafe.g.position.set(mesafe.x, 0, mesafe.z);
+      rigMesafe.g.rotation.y = mesafe.yaw;
+      const mv = Math.hypot(targetMX-mesafe.x, targetMZ-mesafe.z);
+      animRig(rigMesafe, dt, mv > 0.8 ? CFG.walk : 0, false, victory);
+    }
+    if (rigTampon) {
+      rigTampon.g.position.set(tampon.x, 0, tampon.z);
+      rigTampon.g.rotation.y = tampon.yaw;
+      const mv2 = Math.hypot(targetTX-tampon.x, targetTZ-tampon.z);
+      if (tamponWaveT > 0) tamponWaveT -= dt;
+      animRig(rigTampon, dt, mv2 > 0.8 ? CFG.walk : 0, false, victory || tamponWaveT > 0);
+    }
+
+    /* --- kamera --- */
+    camera.position.lerp(new THREE.Vector3(p.x, 12.5, p.z + 14), Math.min(1, dt*3));
+    camera.lookAt(p.x, 2.2, p.z);
+  }
+
+  renderer.render(scene, camera);
+}
+
+function tick() {
+  requestAnimationFrame(tick);
+  stepOnce(Math.min(clock.getDelta(), 0.05));
+}
+
+/* ================= YÜKLEME ================= */
+Promise.all([
+  loadModel('Bilfen_Erkek.glb', 'erkek'),
+  loadModel('Bilfen_Kiz.glb', 'kiz'),
+  loadModel('Bilfen_Robot.glb', 'robot'),
+]).then(() => {
+  // araç = robot (akıllı araç rolü), mesafe = kız, tampon = erkek
+  rigArac   = makeRig('robot');
+  rigMesafe = makeRig('kiz');
+  rigTampon = makeRig('erkek');
+  // menü ekranında da takım görünsün: alttaki boş bölgede, kameraya dönük
+  swapCharacter();
+  rigArac.g.position.set(-1.8, 0, 13.5);   rigArac.g.rotation.y = 0;
+  rigMesafe.g.position.set(1.8, 0, 13.5);  rigMesafe.g.rotation.y = 0;
+  rigTampon.g.position.set(0, 0, 15.5);    rigTampon.g.rotation.y = 0;
+  camera.position.set(0, 6.5, 24);
+  camera.lookAt(0, 4.5, 8);
+  modelsReady = true;
+  const btn = document.querySelector('#menu .btn');
+  btn.disabled = false;
+  btn.textContent = 'ETKİNLİĞE BAŞLA';
+  tick();
+
+  /* ---------- debug köprüsü ---------- */
+  window.__sehir = {
+    get role(){ return role; },
+    get score(){ return brokenCount(); },
+    get modelsReady(){ return modelsReady; },
+    get victory(){ return victory; },
+    get crystals(){ return crystals.filter(c => c.taken).length; },
+    get crystalSpots(){ return crystals.map(c => ({ x:+c.x.toFixed(1), z:+c.z.toFixed(1), taken:c.taken })); },
+    get timeLeft(){ return +Math.max(0, CFG.GAME_TIME - elapsed).toFixed(1); },
+    get crashes(){ return crashCount; },
+    get player(){ return { x:+p.x.toFixed(1), z:+p.z.toFixed(1), vx:+p.vx.toFixed(1), vz:+p.vz.toFixed(1) }; },
+    get npcs(){ return { mesafe:{x:+mesafe.x.toFixed(1), z:+mesafe.z.toFixed(1)}, tampon:{x:+tampon.x.toFixed(1), z:+tampon.z.toFixed(1)} }; },
+    get rigs(){ return {
+      arac: rigArac ? { vis:rigArac.g.visible, anim:rigArac.a.current } : null,
+      mesafe: rigMesafe ? { vis:rigMesafe.g.visible, anim:rigMesafe.a.current } : null,
+      tampon: rigTampon ? { vis:rigTampon.g.visible, anim:rigTampon.a.current } : null };
+    },
+    key(k, ms=300){ keys[k]=true; setTimeout(()=>{ keys[k]=false; }, ms); },
+    role_(r){ setRole(r); },
+    tp(x, z){ p.x=x; p.z=z; p.vx=0; p.vz=0; },
+    nearestIce(){ const nb=nearestFrozen(); return nb ? +(Math.hypot(p.x-nb.x, p.z-nb.z)-nb.r).toFixed(2) : null; },
+    press(){ doSpaceAction(); },
+    step(n=60){ for (let i=0;i<n;i++) stepOnce(1/60); return { score: brokenCount(), crystals: crystals.filter(c=>c.taken).length }; },
+    project(x, y, z){ const v = new THREE.Vector3(x, y, z).project(camera);
+      return { x: Math.round((v.x*0.5+0.5)*innerWidth), y: Math.round((-v.y*0.5+0.5)*innerHeight), behind: v.z > 1 }; },
+    teamScreenPos(){ const pr = (r) => { r.g.updateWorldMatrix(true, true); const c = new THREE.Vector3(); new THREE.Box3().setFromObject(r.g).getCenter(c); return this.project(c.x, c.y, c.z); };
+      return rigArac ? { arac: pr(rigArac), mesafe: pr(rigMesafe), tampon: pr(rigTampon), W: innerWidth, H: innerHeight } : null; },
+    inspect(){
+      const out = {};
+      const probe = (name, rig) => {
+        if (!rig) { out[name] = null; return; }
+        rig.g.updateWorldMatrix(true, true);
+        const bb = new THREE.Box3().setFromObject(rig.g);
+        let meshes = 0, skinned = 0, visibleMeshes = 0, nanGeo = 0, nanMat = 0;
+        rig.g.traverse(o => {
+          if (o.isMesh) {
+            meshes++; if (o.isSkinnedMesh) skinned++; if (o.visible) visibleMeshes++;
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+            const gb = o.geometry.boundingBox;
+            if (!gb || !isFinite(gb.min.x) || !isFinite(gb.max.x)) nanGeo++;
+            const e = o.matrixWorld.elements;
+            if (isNaN(e[0]) || isNaN(e[12]) || isNaN(e[13]) || isNaN(e[14])) nanMat++;
+          }
+        });
+        out[name] = { pos: rig.g.position.toArray().map(v=>+v.toFixed(2)),
+          bbMin: bb.isEmpty() ? 'EMPTY' : bb.min.toArray().map(v=>+v.toFixed(2)),
+          bbMax: bb.isEmpty() ? 'EMPTY' : bb.max.toArray().map(v=>+v.toFixed(2)),
+          meshes, skinned, visibleMeshes, nanGeo, nanMat,
+          innerY: rig.g.children[0] && rig.g.children[0].children[0] ? +rig.g.children[0].children[0].position.y.toFixed(3) : null };
+      };
+      probe('arac', rigArac); probe('mesafe', rigMesafe); probe('tampon', rigTampon);
+      return out;
+    },
+  };
+}).catch(err => {
+  console.error(err);
+  document.querySelector('#menu .sub').textContent = 'MODEL YÜKLENEMEDİ: ' + (err.message || err);
+});
+</script>
+</body>
+</html>

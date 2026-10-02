@@ -1,4 +1,18 @@
-# 🌊 Deniz Dibi — Çöp Avcısı
+# 🎮 Bilfen Oyunları
+
+Tarayıcıda çalışan, kurulum gerektirmeyen 3B eğitim oyunları — Three.js ile.
+
+## 🧊 Buz Kırıcı — Canlı Sensörler ve Akıllı Araç
+
+Buz Fırtınası Akıllı Şehri dondurdu! Akıllı araç ROBI gözleri kapalı yola çıkar — ona **canlı sensörler** eşlik eder: 📡 Mesafe Sensörü (bip hızı + Buz Radarı) ve 🖐 Tampon Sensörü (SPACE ile buz kırma / dur sinyali). 6 buzlu binayı sensör takım work'iyle kır, buz kristallerini topla!
+
+**🎮 Oyna:** [https://bilfen.github.io/bilfen-games/akilli-sehir.html](https://bilfen.github.io/bilfen-games/akilli-sehir.html)
+
+Kontroller: **WASD** yürü · **Shift** koş · **SPACE** buz kır / dur sinyali · **R** rol değiştir. Roller: Akıllı Araç 🚗 / Mesafe Sensörü 📡 / Tampon Sensörü 🖐 — 15 dakikalık sınıf etkinliği, yönerge paneli sağ altta.
+
+---
+
+## 🌊 Deniz Dibi — Çöp Avcısı
 
 Bilfen robotla denize dal, çöpleri topla, denizanalarından kaç! Tarayıcıda çalışan 3D oyun — Three.js ile, kurulum gerektirmez.
 
